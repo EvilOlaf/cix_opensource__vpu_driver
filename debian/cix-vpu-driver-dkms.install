@@ -1,0 +1,4 @@
+#!/usr/bin/dh-exec
+
+driver/ usr/src/cix-vpu-driver-${DEB_VERSION}/
+Makefile usr/src/cix-vpu-driver-${DEB_VERSION}/

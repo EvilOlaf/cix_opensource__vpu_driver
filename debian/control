@@ -1,0 +1,19 @@
+Source: cix-vpu-driver
+Section: misc
+Priority: optional
+Maintainer: Jianfeng Liu <Jianfeng.Liu@cixtech.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-exec,
+ dh-sequence-dkms
+Standards-Version: 4.6.2
+Homepage: https://developer.cixtech.com/
+Vcs-Browser: https://github.com/cixtech/cix_opensource__vpu_driver
+Vcs-Git: https://github.com/cixtech/cix_opensource__vpu_driver.git
+
+Package: cix-vpu-driver-dkms
+Architecture: all
+Depends:
+ ${misc:Depends},
+Description: dkms source for CIX VPU driver
