@@ -1,3 +1,9 @@
+cix-vpu-driver (1.0.1-1) stable; urgency=medium
+
+  * Add cix-vpu-firmware package
+
+ -- Jianfeng Liu <Jianfeng.Liu@cixtech.com>  Mon, 30 Mar 2026 09:52:24 +0800
+
 cix-vpu-driver (1.0.0-1) stable; urgency=medium
 
   * Initial release.

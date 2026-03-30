@@ -15,5 +15,12 @@ Vcs-Git: https://github.com/cixtech/cix_opensource__vpu_driver.git
 Package: cix-vpu-driver-dkms
 Architecture: all
 Depends:
+ cix-vpu-firmware (= ${binary:Version}),
  ${misc:Depends},
 Description: dkms source for CIX VPU driver
+
+Package: cix-vpu-firmware
+Architecture: all
+Depends:
+ ${misc:Depends},
+Description: firmware binaries for CIX VPU driver
