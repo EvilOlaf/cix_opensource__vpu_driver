@@ -1,3 +1,9 @@
+cix-vpu-driver (1.0.1-2) stable; urgency=medium
+
+  * Add hack to set capture buffer align to 16 for chromium
+
+ -- Jianfeng Liu <Jianfeng.Liu@cixtech.com>  Thu, 16 Apr 2026 16:36:28 +0800
+
 cix-vpu-driver (1.0.1-1) stable; urgency=medium
 
   * Add cix-vpu-firmware package

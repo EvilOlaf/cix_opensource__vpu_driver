@@ -1,1 +1,2 @@
 0001-Revert-use-afbc-as-default-format.patch
+0002-mvx_buffer_frame_dim-set-stride_align-to-16-for-chro.patch

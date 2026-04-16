@@ -1,0 +1,46 @@
+From f198af556329960b8a6c6dfa8fad7d6e447e2a51 Mon Sep 17 00:00:00 2001
+From: Jianfeng Liu <Jianfeng.Liu@cixtech.com>
+Date: Fri, 10 Apr 2026 16:14:22 +0800
+Subject: [PATCH] mvx_buffer_frame_dim: set stride_align to 16 for chromium
+
+Chromium will import NV12 frames from v4l2 capture queue buffer, while
+at the time setting v4l2 format chromium doesn't know which stride
+alignment to set, so vpu driver has to provide data aligned to meet the
+requirement of gpu.
+
+From panfost driver in mesa[1], the alignment requirement of
+NV12/NV21/I420 is 16 bytes.
+
+[1] https://gitlab.freedesktop.org/mesa/mesa/-/blob/26.0/src/panfrost/lib/pan_layout.h?ref_type=heads#L219
+
+Signed-off-by: Jianfeng Liu <Jianfeng.Liu@cixtech.com>
+Change-Id: Ic9018f43e0f512049990370a4a5d730ed3eb51d6
+---
+ driver/if/mvx_buffer.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/driver/if/mvx_buffer.c b/driver/if/mvx_buffer.c
+index 9b351c9..b26b7f4 100755
+--- a/driver/if/mvx_buffer.c
++++ b/driver/if/mvx_buffer.c
+@@ -509,7 +509,7 @@ int mvx_buffer_frame_dim(enum mvx_format format,
+         return ret;
+ 
+     for (i = 0; i < *nplanes; i++) {
+-        const unsigned int stride_align = 1;
++        const unsigned int stride_align = 16;
+         unsigned int tmp = DIV_ROUND_UP(width * s[i][0],
+                         SUBSAMPLE_PIXELS);
+         /* Use optimal stride if no special stride was requested. */
+@@ -521,7 +521,7 @@ int mvx_buffer_frame_dim(enum mvx_format format,
+             }
+         } else {
+             /* Else make sure to round up to minimum stride. */
+-            stride[i] = max(stride[i], tmp);
++            stride[i] = max(stride[i], round_up(tmp, stride_align));
+         }
+         size[i] = DIV_ROUND_UP(height * s[i][1],
+                        SUBSAMPLE_PIXELS ) * stride[i];
+-- 
+2.53.0
+
