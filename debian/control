@@ -24,3 +24,9 @@ Architecture: all
 Depends:
  ${misc:Depends},
 Description: firmware binaries for CIX VPU driver
+
+Package: cix-vpu-libc-dev
+Architecture: all
+Depends:
+ ${misc:Depends},
+Description: uAPI headers for CIX VPU driver
