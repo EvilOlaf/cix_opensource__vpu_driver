@@ -87,12 +87,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -f "${{ steps.tag.outputs.run_tag }}"
           git push origin "${{ steps.tag.outputs.run_tag }}" --force
-          gh release create "${{ steps.tag.outputs.run_tag }}" \
-            /tmp/debs/*.deb \
-            --title "${{ steps.tag.outputs.run_tag }}" \
-            --notes "Automated build from ${{ github.sha }}"
+
+      - name: Create release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.run_tag }}
+          name: ${{ steps.tag.outputs.run_tag }}
+          body: "Automated build from ${{ github.sha }}"
+          files: /tmp/debs/*.deb
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts (PR only)
         if: github.event_name == 'pull_request'
