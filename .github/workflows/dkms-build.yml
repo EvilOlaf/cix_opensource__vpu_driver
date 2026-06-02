@@ -1,0 +1,73 @@
+name: Build DKMS Packages
+
+on:
+  push:
+    branches: [ main, cix_mainline_dev ]
+  workflow_dispatch:
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      deb_name: ${{ steps.version.outputs.deb_name }}
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git-buildpackage \
+            debhelper \
+            devscripts \
+            dpkg-dev \
+            fakeroot \
+            dh-dkms \
+            sudo
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from debian/changelog
+        id: version
+        run: |
+          VERSION=$(dpkg-parsechangelog -S Version)
+          DEB_NAME=$(dpkg-parsechangelog -S Source)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "deb_name=${DEB_NAME}" >> $GITHUB_OUTPUT
+          echo "Building ${DEB_NAME} version ${VERSION}"
+
+      - name: Build DKMS packages
+        run: |
+          gbp buildpackage \
+            --git-ignore-branch \
+            --git-builder='debuild --no-lintian -uc -us -b' \
+            --git-export-dir=../build-area
+
+      - name: Move artifacts
+        run: |
+          mkdir -p /tmp/debs
+          mv ../*.deb /tmp/debs/ || true
+          ls -lh /tmp/debs/
+
+      - name: Upload artifacts (push/PR)
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.deb_name }}-${{ steps.version.outputs.version }}
+          path: /tmp/debs/*.deb
+          retention-days: 30
+
+      - name: Upload to release (on release)
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/debs/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
