@@ -39,6 +39,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Debug git status
+        run: |
+          pwd
+          ls -la
+          git status || echo "Not a git repo"
+          ls -la .git/ || echo "No .git dir"
+
       - name: Get version from debian/changelog
         id: version
         run: |
@@ -50,11 +57,13 @@ jobs:
 
       - name: Build DKMS packages
         run: |
+          cd "${GITHUB_WORKSPACE}"
+          pwd
+          git status
           gbp buildpackage \
             --git-ignore-branch \
             --git-builder='debuild --no-lintian -uc -us -b' \
             --git-export-dir="${GITHUB_WORKSPACE}/../build-area"
-        working-directory: ${{ github.workspace }}
 
       - name: Move artifacts
         run: |
