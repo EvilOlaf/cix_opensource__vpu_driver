@@ -32,6 +32,8 @@ jobs:
             dpkg-dev \
             fakeroot \
             dh-dkms \
+            dh-exec \
+            build-essential \
             sudo
 
       - name: Checkout source
