@@ -3,9 +3,14 @@ name: Build DKMS Packages
 on:
   push:
     branches: [ main, cix_mainline_dev ]
+  pull_request:
+    branches: [ main, cix_mainline_dev ]
   workflow_dispatch:
   release:
     types: [ created ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -48,12 +53,13 @@ jobs:
           gbp buildpackage \
             --git-ignore-branch \
             --git-builder='debuild --no-lintian -uc -us -b' \
-            --git-export-dir=../build-area
+            --git-export-dir="${GITHUB_WORKSPACE}/../build-area"
+        working-directory: ${{ github.workspace }}
 
       - name: Move artifacts
         run: |
           mkdir -p /tmp/debs
-          mv ../*.deb /tmp/debs/ || true
+          mv "${GITHUB_WORKSPACE}/../build-area"/*.deb /tmp/debs/ || true
           ls -lh /tmp/debs/
 
       - name: Upload artifacts (push/PR)
