@@ -1,0 +1,116 @@
+name: Build DKMS Packages
+
+on:
+  push:
+    branches: [ main, cix_mainline_dev ]
+  pull_request:
+    branches: [ main, cix_mainline_dev ]
+  workflow_dispatch:
+  release:
+    types: [ created ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      deb_name: ${{ steps.version.outputs.deb_name }}
+      run_tag: ${{ steps.tag.outputs.run_tag }}
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git-buildpackage \
+            debhelper \
+            devscripts \
+            dpkg-dev \
+            fakeroot \
+            dh-dkms \
+            dh-exec \
+            build-essential \
+            sudo
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from debian/changelog
+        id: version
+        run: |
+          VERSION=$(dpkg-parsechangelog -S Version)
+          DEB_NAME=$(dpkg-parsechangelog -S Source)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "deb_name=${DEB_NAME}" >> $GITHUB_OUTPUT
+          echo "Building ${DEB_NAME} version ${VERSION}"
+
+      - name: Generate run tag
+        id: tag
+        if: github.event_name != 'pull_request'
+        run: |
+          # Tag format: build-{deb_name}-{version}-{run_number}
+          # Example: build-cix-vpu-driver-1.0.1-3-42
+          RUN_TAG="build-${{ steps.version.outputs.deb_name }}-${{ steps.version.outputs.version }}-${{ github.run_number }}"
+          echo "run_tag=${RUN_TAG}" >> $GITHUB_OUTPUT
+          echo "Tag will be: ${RUN_TAG}"
+
+      - name: Build DKMS packages
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          cd "${GITHUB_WORKSPACE}"
+          gbp buildpackage \
+            --git-ignore-branch \
+            --git-builder='debuild --no-lintian -uc -us -b -nc' \
+            --git-export-dir="${GITHUB_WORKSPACE}/../build-area"
+
+      - name: Move artifacts
+        run: |
+          mkdir -p /tmp/debs
+          mv "${GITHUB_WORKSPACE}/../build-area"/*.deb /tmp/debs/ || true
+          ls -lh /tmp/debs/
+
+      - name: Push tag and create release
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "${{ steps.tag.outputs.run_tag }}"
+          git push origin "${{ steps.tag.outputs.run_tag }}" --force
+
+      - name: Create release
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.run_tag }}
+          name: ${{ steps.tag.outputs.run_tag }}
+          body: "Automated build from ${{ github.sha }}"
+          files: /tmp/debs/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version.outputs.deb_name }}-${{ steps.version.outputs.version }}
+          path: /tmp/debs/*.deb
+          retention-days: 30
+
+      - name: Upload to release (on manual release)
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/debs/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
