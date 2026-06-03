@@ -1,0 +1,52 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/cixtech/cix_opensource__vpu_driver.git
+
+      - name: Fetch upstream
+        run: |
+          git fetch upstream cix_mainline_dev
+
+      - name: Merge upstream changes
+        run: |
+          git checkout cix_mainline_dev
+          git merge upstream/cix_mainline_dev --no-edit -X theirs
+        continue-on-error: true
+
+      - name: Rebase if merge failed
+        if: failure()
+        run: |
+          git checkout cix_mainline_dev
+          git rebase upstream/cix_mainline_dev
+        continue-on-error: true
+
+      - name: Push to fork
+        run: |
+          git push origin cix_mainline_dev --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
