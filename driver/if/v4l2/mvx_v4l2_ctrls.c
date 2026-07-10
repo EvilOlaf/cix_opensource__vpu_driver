@@ -957,6 +957,14 @@ static int set_ctrl(struct v4l2_ctrl *ctrl)
         i32_val = *ctrl->p_new.p_s32;
         ret = mvx_session_set_enc_inter_ipenalty_dc(session, i32_val);
         break;
+    case V4L2_CID_MVE_VIDEO_RRC_DQP_RANGE:
+        i32_val = *ctrl->p_new.p_s32;
+        ret = mvx_session_set_rrc_dqp_range(session, i32_val);
+        break;
+    case V4L2_CID_MVE_VIDEO_RRC_DQP_STEP:
+        i32_val = *ctrl->p_new.p_s32;
+        ret = mvx_session_set_rrc_dqp_step(session, i32_val);
+        break;
     case V4L2_CID_MVE_VIDEO_ENC_DISABLE_TIMESCALE:
         i32_val = *ctrl->p_new.p_s32;
         ret = mvx_session_set_enc_disable_timescale(session, i32_val);
@@ -2234,6 +2242,20 @@ int mvx_v4l2_ctrls_init_enc(struct v4l2_ctrl_handler *hnd)
         hnd, V4L2_CID_MVE_VIDEO_ENC_INTER_IPENALTY_DC,
         "inter ipenalty dc",
         MVX_INVALID_VAL, 31, MVX_INVALID_VAL, 1);
+    if (ctrl == NULL)
+        goto handler_free;
+
+    ctrl = mvx_v4l2_ctrl_new_custom_int(
+        hnd, V4L2_CID_MVE_VIDEO_RRC_DQP_RANGE,
+        "rrc dqp range",
+        MVX_INVALID_VAL, 25, MVX_INVALID_VAL, 1);
+    if (ctrl == NULL)
+        goto handler_free;
+
+    ctrl = mvx_v4l2_ctrl_new_custom_int(
+        hnd, V4L2_CID_MVE_VIDEO_RRC_DQP_STEP,
+        "rrc dqp step",
+        MVX_INVALID_VAL, 25, MVX_INVALID_VAL, 1);
     if (ctrl == NULL)
         goto handler_free;
 

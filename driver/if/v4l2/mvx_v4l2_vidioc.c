@@ -619,6 +619,7 @@ static void buf_finish(struct vb2_buffer *vb)
     }
 }
 
+#if KERNEL_VERSION(7, 0, 0) > LINUX_VERSION_CODE
 /**
  * wait_prepare() - Prepare driver for waiting
  * @q:        Pointer to Vb2 queue.
@@ -665,6 +666,7 @@ static void wait_finish(struct vb2_queue *q)
      */
     ignore = mutex_lock_interruptible(&vsession->mutex);
 }
+#endif /* KERNEL_VERSION(7, 0, 0) > LINUX_VERSION_CODE */
 
 /**
  * mvx_vb2_ops - Callbacks for Vb2 framework

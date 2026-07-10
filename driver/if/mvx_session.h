@@ -462,6 +462,8 @@ struct mvx_session {
     uint32_t job_frames;
     uint32_t force_key_frame;
     bool pending_switch_out;
+    /* YUV2RGB CSC was programmed on the firmware session. */
+    bool yuv2rgb_configured;
     bool is_encoder;
     bool is_jpeg;
     struct timespec64 *ts;
@@ -480,6 +482,8 @@ struct mvx_session {
     uint32_t inter_ipenalty_planar;
     uint32_t inter_ipenalty_dc;
     struct mvx_lambda_scale lambda_scale;
+    int rrc_dqp_range;
+    int rrc_dqp_step;
     uint32_t disable_timescale;
     uint32_t pause_counter;
     uint32_t fps_before_pause;
@@ -703,6 +707,18 @@ static inline struct mvx_session *mvx_if_session_to_session(
  */
 void mvx_session_port_show(struct mvx_session_port *port,
                struct seq_file *s);
+
+/**
+ * mvx_session_update_memory_stats() - Update memory stats for a session.
+ *        Collects fw/rpc size and calls V4L2 extension for buffer stats.
+ * @session:    Pointer to session.
+ * @stats:      Memory stats to fill.
+ * @group:      Pointer to the perf log group.
+ * @write_idx:  Pointer to current write index.
+ */
+void mvx_session_update_memory_stats(struct mvx_session *session,
+    struct mvx_log_memory_stats *stats, struct mvx_log_group *group,
+    int *write_idx);
 
 /*
  * Functions bellow implement different settings for a session.
@@ -1494,6 +1510,8 @@ int mvx_session_set_enc_intra_ipenalty_dc(struct mvx_session *session, int val);
 int mvx_session_set_enc_inter_ipenalty_angular(struct mvx_session *session, int val);
 int mvx_session_set_enc_inter_ipenalty_planar(struct mvx_session *session, int val);
 int mvx_session_set_enc_inter_ipenalty_dc(struct mvx_session *session, int val);
+int mvx_session_set_rrc_dqp_range(struct mvx_session *session, int val);
+int mvx_session_set_rrc_dqp_step(struct mvx_session *session, int val);
 int mvx_session_set_enc_disable_timescale(struct mvx_session *session, int val);
 /**
  * mvx_session_update_buffer_count() - Update session port buffer max and min.
