@@ -31,7 +31,7 @@
 #ifndef __MVX_DSM_H
 #define __MVX_DSM_H
 
-#ifdef CONFIG_PLAT_DSM_SYSEVENT
+#if IS_ENABLED(CONFIG_PLAT_DSM_SYSEVENT)
 
 #include <linux/soc/cix/dsm_pub.h>
 

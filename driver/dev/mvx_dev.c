@@ -160,6 +160,7 @@ struct mvx_dev_ctx {
     unsigned int target_cpufreq;
     struct list_head cpufreq_req_list;
     struct dsm_client *mvx_dsm_client;
+    struct completion probe_done;
 };
 
 /**
@@ -476,7 +477,7 @@ static int send_irq(struct mvx_client_session *csession)
     return ret;
 }
 
-int soft_irq(struct mvx_client_session *csession)
+static int soft_irq(struct mvx_client_session *csession)
 {
     struct mvx_dev_ctx *ctx;
     int ret;
@@ -519,6 +520,19 @@ static void print_debug(struct mvx_client_session *csession)
     struct mvx_dev_ctx *ctx = csession->ctx;
 
     mvx_sched_print_debug(&ctx->scheduler, &csession->session);
+}
+
+static int wait_probe_done(struct mvx_client_ops *client)
+{
+    struct mvx_dev_ctx *ctx = container_of(client, struct mvx_dev_ctx, client_ops);
+    unsigned long timeout;
+
+    timeout = wait_for_completion_timeout(&ctx->probe_done,
+                          msecs_to_jiffies(10000));
+    if (timeout == 0)
+        return -ETIMEDOUT;
+
+    return 0;
 }
 
 static struct mvx_dev_ctx *work_to_ctx(struct work_struct *work)
@@ -877,6 +891,7 @@ static int mvx_dev_probe(struct device *dev,
 
     ctx->dev = dev;
     dev_set_drvdata(dev, ctx);
+    init_completion(&ctx->probe_done);
 
     /* Setup client ops callbacks. */
     ctx->client_ops.get_hw_ver = get_hw_ver;
@@ -894,6 +909,7 @@ static int mvx_dev_probe(struct device *dev,
     ctx->client_ops.terminate = terminate;
     ctx->client_ops.reset_priority = reset_priority;
     ctx->client_ops.notify_dsm_event = notify_dsm_event;
+    ctx->client_ops.wait_probe_done = wait_probe_done;
 
     /* Create if context. */
     ctx->if_ops = mvx_if_create(dev, &ctx->client_ops, ctx);
@@ -1043,6 +1059,8 @@ static int mvx_dev_probe(struct device *dev,
               mvx_hwreg_get_nlsid(&ctx->hwreg),
               dev->id);
 
+    complete_all(&ctx->probe_done);
+
     mvx_pm_runtime_put_sync(ctx->dev);
     return 0;
 
@@ -1087,6 +1105,8 @@ destroy_if:
     mvx_if_destroy(ctx->if_ops);
 
 free_ctx:
+    complete_all(&ctx->probe_done);
+
     devm_kfree(dev, ctx);
     return ret;
 }
@@ -1189,6 +1209,11 @@ static int mvx_hw_init(struct device *dev)
         mvx_hwreg_write(&ctx->hwreg, MVX_HWREG_CLKFORCE, 0);
     }
 
+    /* sky1p mmhub DDR address remap default to 256 byte 4 channel, therefore,
+     * the alignment boundary for VPU split bursts must be less than 256.
+     */
+    if (ctx->hwreg.hw_ver.svn_revision == MVE_SVN_4K)
+        busctrl_split = busctrl_split > MVE_BUSTCTRL_SPLIT_256 ? MVE_BUSTCTRL_SPLIT_256 : busctrl_split;
     mvx_hwreg_write(&ctx->hwreg, MVX_HWREG_BUSCTRL,
                     busctrl_ref << MVE_BUSTCTRL_REF_SHIFT |
                     busctrl_split);
@@ -1286,8 +1311,8 @@ static int mvx_pm_runtime_suspend(struct device *dev)
         mvx_hwreg_write(&ctx->hwreg, MVX_HWREG_CLKFORCE, 0);
     }
 
-    if (!IS_ERR_OR_NULL(ctx->clk))
-        clk_disable_unprepare(ctx->clk);
+    reset_control_assert(ctx->rstc);
+    clk_disable_unprepare(ctx->clk);
 
     for (i = 1; i < ctx->pmdomains_cnt; i++) {
         if (mvx_test_bit(i, &mask)) {
@@ -1326,12 +1351,8 @@ static int mvx_pm_runtime_resume(struct device *dev)
         MVX_LOG_PRINT(&mvx_log_dev, MVX_LOG_ERROR, "Failed to enable clock, %d.", ret);
         return ret;
     }
-
-    enable_irq(ctx->irq);
-
-    reset_control_assert(ctx->rstc);
-    usleep_range(10, 20);
     reset_control_deassert(ctx->rstc);
+    enable_irq(ctx->irq);
 
     mvx_switch_qchannel_clock_gating(ctx, true);
 

@@ -45,7 +45,9 @@ dev-y := dev/mvx_dev.o \
 	 dev/mvx_scheduler.o \
 	 mvx_pm_runtime.o
 
-dev-$(CONFIG_PLAT_DSM_SYSEVENT) += dev/mvx_dsm.o
+ifneq ($(CONFIG_PLAT_DSM_SYSEVENT),)
+dev-y += dev/mvx_dsm.o
+endif
 
 # Add driver objects.
 amvx-y := mvx_driver.o \

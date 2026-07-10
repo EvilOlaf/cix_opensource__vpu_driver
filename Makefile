@@ -35,7 +35,9 @@ dev-y := driver/dev/mvx_dev.o \
 	 driver/dev/mvx_scheduler.o \
 	 driver/mvx_pm_runtime.o
 
-dev-$(CONFIG_PLAT_DSM_SYSEVENT) += driver/dev/mvx_dsm.o
+ifneq ($(CONFIG_PLAT_DSM_SYSEVENT),)
+dev-y += driver/dev/mvx_dsm.o
+endif
 
 OBJS := driver/mvx_driver.o \
 	  driver/mvx_seq.o \
