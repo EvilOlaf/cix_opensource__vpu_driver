@@ -65,6 +65,14 @@ jobs:
           echo "run_tag=${RUN_TAG}" >> $GITHUB_OUTPUT
           echo "Tag will be: ${RUN_TAG}"
 
+      # debian/gbp.conf names an upstream tag as upstream-tree.
+      # The fork does not get new upstream tags. Fetch them.
+      - name: Fetch upstream tags
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+          cd "${GITHUB_WORKSPACE}"
+          git fetch --tags https://github.com/cixtech/cix_opensource__vpu_driver.git
+
       # Armbian fixes stay in armbian/patches, apart from the upstream files.
       # A patch that does not apply stops the build.
       - name: Add Armbian patches
