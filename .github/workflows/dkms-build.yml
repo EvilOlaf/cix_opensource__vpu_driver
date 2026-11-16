@@ -65,12 +65,26 @@ jobs:
           echo "run_tag=${RUN_TAG}" >> $GITHUB_OUTPUT
           echo "Tag will be: ${RUN_TAG}"
 
+      # Armbian fixes stay in armbian/patches, apart from the upstream files.
+      # A patch that does not apply stops the build.
+      - name: Add Armbian patches
+        run: |
+          cd "${GITHUB_WORKSPACE}"
+          [ -f armbian/patches/series ] || exit 0
+          mkdir -p debian/patches
+          touch debian/patches/series
+          sed -i -e '$a\' debian/patches/series
+          cp armbian/patches/*.patch debian/patches/
+          cat armbian/patches/series >> debian/patches/series
+
       - name: Build DKMS packages
         run: |
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
           cd "${GITHUB_WORKSPACE}"
+          # WC: build the working copy, which includes the Armbian patches.
           gbp buildpackage \
             --git-ignore-branch \
+            --git-export=WC \
             --git-builder='debuild --no-lintian -uc -us -b -nc' \
             --git-export-dir="${GITHUB_WORKSPACE}/../build-area"
 
